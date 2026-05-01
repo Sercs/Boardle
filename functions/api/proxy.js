@@ -33,9 +33,8 @@ export async function onRequest(context) {
 
   try {
     const headers = new Headers(request.headers);
-    // Remove headers that might cause issues with the target server
+    // Remove headers that might cause issues, but KEEP 'origin' for POST requests
     headers.delete("host");
-    headers.delete("origin");
     
     // Set a fake referer to look like we're coming from the APKPure site
     if (targetUrl.includes('apkpure') || targetUrl.includes('winudf')) {

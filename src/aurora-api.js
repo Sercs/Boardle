@@ -1,12 +1,9 @@
 
 const HOST_BASES = {
-  aurora: "auroraboardapp",
-  decoy: "decoyboardapp",
-  grasshopper: "grasshopperboardapp",
-  kilter: "kilterboardapp",
-  soill: "soillboardapp",
+  aurora: "auroraclimbing",
   tension: "tensionboardapp2",
-  touchstone: "touchstoneboardapp",
+  kilter: "kilterboard",
+  grasshopper: "grasshopperboard",
 };
 
 const WEB_HOSTS = Object.fromEntries(
