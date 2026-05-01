@@ -10,7 +10,8 @@ export async function onRequest(context) {
     'grasshopperboard.com',
     'apkpure.net',
     'apkpure.com',
-    'winudf.com'
+    'winudf.com',
+    'googleusercontent.com'
   ];
 
   const isAllowed = allowedHosts.some(host => targetUrl && targetUrl.includes(host));
@@ -35,20 +36,21 @@ export async function onRequest(context) {
     // Remove headers that might cause issues with the target server
     headers.delete("host");
     headers.delete("origin");
-    headers.delete("referer");
+    
+    // Set a fake referer to look like we're coming from the APKPure site
+    if (targetUrl.includes('apkpure') || targetUrl.includes('winudf')) {
+      headers.set("Referer", "https://apkpure.com/");
+      headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+    } else {
+      headers.delete("referer");
+      headers.set("User-Agent", "Kilter%20Board/202 CFNetwork/1568.100.1 Darwin/24.0.0");
+    }
 
     // Handle the custom token header we use to pass session info
     const token = headers.get("X-Aurora-Token");
     if (token) {
       headers.set("Cookie", `token=${token}`);
       headers.delete("X-Aurora-Token");
-    }
-
-    // 5. IDENTITY: Use a browser UA for APKPure and a mobile UA for climbing APIs
-    if (targetUrl.includes('apkpure')) {
-      headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-    } else {
-      headers.set("User-Agent", "Kilter%20Board/202 CFNetwork/1568.100.1 Darwin/24.0.0");
     }
 
     const body = (request.method !== "GET" && request.method !== "HEAD") 
