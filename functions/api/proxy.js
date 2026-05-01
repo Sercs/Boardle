@@ -9,7 +9,8 @@ export async function onRequest(context) {
     'kilterboard.com',
     'grasshopperboard.com',
     'apkpure.net',
-    'apkpure.com'
+    'apkpure.com',
+    'winudf.com'
   ];
 
   const isAllowed = allowedHosts.some(host => targetUrl && targetUrl.includes(host));
