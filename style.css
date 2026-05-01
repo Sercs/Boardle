@@ -1085,6 +1085,41 @@ button:active {
   width: 100%;
 }
 
+#setup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
+.setup-divider {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: rgba(255,255,255,0.2);
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.setup-divider::before, .setup-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.1);
+}
+
+.secondary-btn {
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: white !important;
+}
+
+.secondary-btn:hover {
+  background: rgba(255,255,255,0.1) !important;
+}
+
 #normal-status.hidden {
   display: none;
 }

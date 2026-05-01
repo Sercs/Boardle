@@ -205,7 +205,12 @@
         <h1>Boardle</h1>
         <p>No database found. To begin, we need to fetch the board data and climb library.</p>
 
-        <button id="setup-fetch-btn">Fetch Database</button>
+        <div id="setup-actions">
+          <button id="setup-fetch-btn">Fetch Database (Automatic)</button>
+          <div class="setup-divider"><span>OR</span></div>
+          <button id="setup-import-btn" class="secondary-btn">Import Database File (Manual)</button>
+          <input type="file" id="setup-file-input" class="hidden" accept=".sqlite3,.sqlite,.db" />
+        </div>
         
         <div id="setup-progress-container" class="hidden">
           <div class="setup-progress-bar">

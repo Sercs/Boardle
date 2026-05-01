@@ -580,17 +580,59 @@ async function init() {
   const setupBtn = document.getElementById('setup-fetch-btn');
   if (setupBtn) {
     setupBtn.onclick = () => {
-      document.getElementById('setup-progress-container').classList.remove('hidden');
+      const progressContainer = document.getElementById('setup-progress-container');
+      if (progressContainer) progressContainer.classList.remove('hidden');
       setupBtn.classList.add('hidden');
 
       syncUI.handleAPKDownload({
         isInitialSetup: true,
         onComplete: () => {
-          document.getElementById('setup-screen').classList.add('hidden');
+          const screen = document.getElementById('setup-screen');
+          if (screen) screen.classList.add('hidden');
           showToast("Boardle Initialized!", 3000);
-          triggerSearch(true);
+          if (window.reinitApp) window.reinitApp();
         }
       });
+    };
+  }
+
+  const importBtn = document.getElementById('setup-import-btn');
+  const fileInput = document.getElementById('setup-file-input');
+  if (importBtn && fileInput) {
+    importBtn.onclick = () => fileInput.click();
+    fileInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const setupActions = document.getElementById('setup-actions');
+      const progressContainer = document.getElementById('setup-progress-container');
+      const statusText = document.getElementById('setup-status');
+      const progressFill = document.getElementById('setup-progress-fill');
+
+      try {
+        if (setupActions) setupActions.classList.add('hidden');
+        if (progressContainer) progressContainer.classList.remove('hidden');
+        if (statusText) statusText.textContent = `Reading ${file.name}...`;
+        
+        const buffer = await file.arrayBuffer();
+        if (progressFill) progressFill.style.width = '50%';
+        if (statusText) statusText.textContent = 'Installing database...';
+        
+        await dbClient.replaceDatabase(buffer);
+        if (progressFill) progressFill.style.width = '100%';
+        
+        const screen = document.getElementById('setup-screen');
+        if (screen) screen.classList.add('hidden');
+        showToast("Boardle Initialized!", 3000);
+        
+        if (window.reinitApp) {
+          await window.reinitApp();
+        }
+      } catch (err) {
+        alert(`Import Failed: ${err.message}`);
+        if (setupActions) setupActions.classList.remove('hidden');
+        if (progressContainer) progressContainer.classList.add('hidden');
+      }
     };
   }
 

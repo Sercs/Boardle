@@ -36,6 +36,14 @@ export class SyncUI {
               <button id="sync-login-btn">Log In & Sync</button>
             </div>
           </div>
+
+          <div class="sync-divider-container"><div class="sync-divider"></div><span>OR</span><div class="sync-divider"></div></div>
+
+          <div class="sync-step">
+            <p class="sync-note">If automatic sync fails, you can manually import a <b>tension.sqlite3</b> file.</p>
+            <button id="sync-import-btn" class="secondary-btn">Import Local File</button>
+            <input type="file" id="sync-file-input" class="hidden" accept=".sqlite3,.sqlite,.db" />
+          </div>
         </div>
 
         <div id="sync-progress" class="hidden">
@@ -62,6 +70,8 @@ export class SyncUI {
     // Event listeners
     this.overlay.querySelector('#sync-close').onclick = () => this.hide();
     this.overlay.querySelector('#sync-login-btn').onclick = () => this.handleAPISync();
+    this.overlay.querySelector('#sync-import-btn').onclick = () => this.overlay.querySelector('#sync-file-input').click();
+    this.overlay.querySelector('#sync-file-input').onchange = (e) => this.handleManualImport(e);
     this.overlay.querySelector('#sync-finish-btn').onclick = () => this.hide();
 
     // Inject styles
@@ -127,19 +137,25 @@ export class SyncUI {
         font-size: 0.95rem;
       }
       
-      #sync-apk-btn, #sync-login-btn {
+      #sync-apk-btn, #sync-login-btn, .secondary-btn {
         width: 100%;
         padding: 12px;
         font-size: 0.95rem;
         background: #3b82f6;
+        border: none;
+        color: white;
         border-radius: 8px;
         font-weight: 600;
-        transition: transform 0.2s;
+        cursor: pointer;
+        transition: transform 0.2s, background 0.2s;
       }
-      #sync-apk-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); }
-      #sync-apk-btn:hover { background: rgba(255,255,255,0.2); }
+      .secondary-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+      .secondary-btn:hover { background: rgba(255,255,255,0.1); }
       
-      #sync-login-btn:active, #sync-apk-btn:active { transform: scale(0.98); }
+      .sync-divider-container { display: flex; align-items: center; gap: 15px; margin: 15px 0; color: rgba(255,255,255,0.2); font-size: 0.7rem; font-weight: bold; }
+      .sync-divider { flex: 1; height: 1px; background: rgba(255,255,255,0.1); }
+
+      #sync-login-btn:active, .secondary-btn:active { transform: scale(0.98); }
       
       .progress-status { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; }
       .progress-bar-container {
@@ -287,6 +303,39 @@ export class SyncUI {
       this.log(`ERROR: ${err.message}`);
       alert(`Initialization Failed: ${err.message}`);
       if (!isInitialSetup) this.resetUI();
+    }
+  }
+
+  async handleManualImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      this.overlay.querySelector('#sync-main-content').classList.add('hidden');
+      this.overlay.querySelector('#sync-progress').classList.remove('hidden');
+      this.log(`Reading file: ${file.name}...`);
+      
+      const buffer = await file.arrayBuffer();
+      this.log('File loaded. Installing into browser storage...');
+
+      await this.dbClient.replaceDatabase(buffer);
+      this.log('Installation successful!');
+
+      this.overlay.querySelector('#sync-progress-bar').style.width = '100%';
+      this.overlay.querySelector('#sync-success').classList.remove('hidden');
+      this.overlay.querySelector('#sync-progress').classList.add('hidden');
+      this.overlay.querySelector('#success-message').textContent = 'Database imported successfully from local file.';
+
+      this.isLocal = true;
+      this.updateButtonStatus();
+
+      if (window.reinitApp) {
+        await window.reinitApp();
+      }
+    } catch (err) {
+      this.log(`ERROR: ${err.message}`);
+      alert(`Import Failed: ${err.message}`);
+      this.resetUI();
     }
   }
 
