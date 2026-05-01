@@ -11,7 +11,7 @@ const DB_KEY = 'tension-db';
 
 async function saveToIndexedDB(buffer) {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
+    const request = indexedDB.open(DB_NAME, 2);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
@@ -31,7 +31,7 @@ async function saveToIndexedDB(buffer) {
 
 async function loadFromIndexedDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
+    const request = indexedDB.open(DB_NAME, 2);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
@@ -77,7 +77,7 @@ self.onmessage = async function(e) {
             console.error('IndexedDB database is corrupted, clearing...', e);
             buffer = null;
             isLocal = false;
-            const request = indexedDB.open(DB_NAME, 1);
+            const request = indexedDB.open(DB_NAME, 2);
             request.onsuccess = () => {
               request.result.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete(DB_KEY);
             };
@@ -773,7 +773,7 @@ self.onmessage = async function(e) {
   if (type === 'SAVE_IMAGE') {
     const { filename, buffer } = payload;
     try {
-      const request = indexedDB.open(DB_NAME, 1);
+      const request = indexedDB.open(DB_NAME, 2);
       request.onsuccess = () => {
         const db = request.result;
         const transaction = db.transaction(IMAGE_STORE_NAME, 'readwrite');
@@ -790,7 +790,7 @@ self.onmessage = async function(e) {
   if (type === 'GET_IMAGE') {
     const { filename } = payload;
     try {
-      const request = indexedDB.open(DB_NAME, 1);
+      const request = indexedDB.open(DB_NAME, 2);
       request.onsuccess = () => {
         const db = request.result;
         const transaction = db.transaction(IMAGE_STORE_NAME, 'readonly');
