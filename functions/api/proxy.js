@@ -1,7 +1,28 @@
 export async function onRequest(context) {
-  const { request } = context;
+  const { request, env } = context;
   const url = new URL(request.url);
   const targetUrl = url.searchParams.get("url");
+
+  // --- R2 FALLBACK LOGIC ---
+  // If you bind an R2 bucket named 'BUCKET', we check there first for assets.
+  if (env.BUCKET && targetUrl) {
+    const filename = targetUrl.split('/').pop();
+    // Only check R2 for sqlite or image files
+    if (filename.endsWith('.sqlite3') || filename.match(/\.(png|jpg|jpeg|webp)$/i)) {
+      try {
+        const object = await env.BUCKET.get(filename);
+        if (object) {
+          const headers = new Headers();
+          object.writeHttpMetadata(headers);
+          headers.set("Access-Control-Allow-Origin", "*");
+          headers.set("X-Proxy-Source", "R2-Bucket");
+          return new Response(object.body, { headers });
+        }
+      } catch (e) {
+        console.warn('R2 Fetch Error:', e);
+      }
+    }
+  }
 
   const allowedHosts = [
     'auroraclimbing.com',
