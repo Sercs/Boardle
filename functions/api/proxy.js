@@ -4,9 +4,10 @@ export async function onRequest(context) {
   const targetUrl = url.searchParams.get("url");
 
   // --- R2 FALLBACK LOGIC ---
-  const r2Status = env.BUCKET ? "Bound" : "Not Bound";
+  const bucket = env.BUCKET || Object.values(env).find(v => v && typeof v.get === 'function');
+  const r2Status = bucket ? "Bound" : "Not Bound";
   
-  if (env.BUCKET && targetUrl && targetUrl.startsWith('http')) {
+  if (bucket && targetUrl && targetUrl.startsWith('http')) {
     try {
       const targetUrlObj = new URL(targetUrl);
       let filename = targetUrlObj.pathname.split('/').pop();
@@ -14,7 +15,7 @@ export async function onRequest(context) {
       if (filename.endsWith('.sqlite3') || filename.match(/\.(png|jpg|jpeg|webp)$/i)) {
         try {
           console.log(`[Proxy] R2 Lookup: "${filename}"`);
-          const object = await env.BUCKET.get(filename);
+          const object = await bucket.get(filename);
           if (object) {
             const headers = new Headers();
             object.writeHttpMetadata(headers);
