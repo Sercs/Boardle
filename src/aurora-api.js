@@ -69,8 +69,10 @@ export async function fetchDatabase(board) {
   const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(dummyUrl)}`;
   
   const response = await fetch(proxyUrl);
+  console.log(`[Database] Proxy Response: ${response.status} (${response.headers.get('X-Proxy-Source') || 'Internet'})`);
+  
   if (!response.ok) {
-    throw new Error(`Direct fetch failed: ${response.status}`);
+    throw new Error(`Direct fetch failed: ${response.status}. Check if tension.sqlite3 exists in R2.`);
   }
 
   // Check if it's actually a sqlite file (starts with "SQLite format 3")

@@ -283,7 +283,8 @@ export class SyncUI {
         buffer = await fetchDatabase(board);
         this.log('Cloud version found! Installing...');
       } catch (e) {
-        this.log('Cloud version not found. Falling back to APK extract...');
+        this.log(`Cloud version skipped: ${e.message}`);
+        this.log('Falling back to APK extract...');
         buffer = await downloadAPKDatabase(board);
       }
 
