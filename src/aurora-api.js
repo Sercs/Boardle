@@ -61,6 +61,28 @@ export async function login(board, username, password) {
   return data.session.token;
 }
 
+// Helper to fetch the raw database file directly (from R2 or similar)
+export async function fetchDatabase(board) {
+  console.log(`[Database] Attempting direct fetch for ${board}.sqlite3...`);
+  // We use a dummy URL that ends in .sqlite3 so the proxy checks R2
+  const dummyUrl = `https://tensionboardapp2.com/${board}.sqlite3`;
+  const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(dummyUrl)}`;
+  
+  const response = await fetch(proxyUrl);
+  if (!response.ok) {
+    throw new Error(`Direct fetch failed: ${response.status}`);
+  }
+
+  // Check if it's actually a sqlite file (starts with "SQLite format 3")
+  const buffer = await response.arrayBuffer();
+  const header = new TextDecoder().decode(new Uint8Array(buffer).slice(0, 15));
+  if (header !== "SQLite format 3") {
+    throw new Error("Downloaded file is not a valid SQLite database");
+  }
+
+  return buffer;
+}
+
 // Helper to download the official APK and extract the starter database (BoardLib style)
 export async function downloadAPKDatabase(board) {
   const packageNames = {

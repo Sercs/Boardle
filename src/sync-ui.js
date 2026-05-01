@@ -1,5 +1,5 @@
 
-import { login, sync, downloadAPKDatabase } from './aurora-api.js';
+import { login, sync, downloadAPKDatabase, fetchDatabase } from './aurora-api.js';
 
 export class SyncUI {
   constructor(dbClient) {
@@ -277,7 +277,16 @@ export class SyncUI {
       if (statusText) statusText.textContent = 'Fetching database...';
       this.log('Connecting to official sources...');
       
-      const buffer = await downloadAPKDatabase(board);
+      let buffer;
+      try {
+        this.log('Checking for optimized cloud version...');
+        buffer = await fetchDatabase(board);
+        this.log('Cloud version found! Installing...');
+      } catch (e) {
+        this.log('Cloud version not found. Falling back to APK extract...');
+        buffer = await downloadAPKDatabase(board);
+      }
+
       this.log(`Download complete! Processing data...`);
       
       if (progressBar) progressBar.style.width = '50%';
