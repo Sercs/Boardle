@@ -939,7 +939,7 @@ function clearAllFilters(silent = false) {
 
   updateClearButtonsUI();
 
-  if (!silent) {
+  if (silent !== true) {
     if (recommendationStack.length > 0) {
       ignoreFiltersInRecommendations = false; 
       renderRecommendationResults();
@@ -956,7 +956,7 @@ function clearHoldFilters(silent = false) {
   updateHoldsUI();
   updateClearButtonsUI();
 
-  if (!silent) {
+  if (silent !== true) {
     if (recommendationStack.length > 0) {
       renderRecommendationResults();
     } else {
