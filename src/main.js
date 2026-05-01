@@ -80,7 +80,22 @@ let touchStartY = 0;
 let hadMapModeThisSession = false;
 // ... (omitted middle code for brevity)
 
-async function reinitApp(readyPayload) {
+window.reinitApp = async function(readyPayload) {
+  // If no payload provided, request it from the worker
+  if (!readyPayload) {
+    const requestId = `refresh_state_${Date.now()}`;
+    readyPayload = await new Promise(resolve => {
+      const handler = (e) => {
+        if (e.data.type === 'READY') {
+          dbClient.worker.removeEventListener('message', handler);
+          resolve(e.data.payload);
+        }
+      };
+      dbClient.worker.addEventListener('message', handler);
+      dbClient.worker.postMessage({ type: 'GET_STATE' }); // We'll add this handler to the worker
+    });
+  }
+
   // Check sync status now that DB is ready
   if (syncUI) {
     syncUI.isLocal = readyPayload.isLocal;
