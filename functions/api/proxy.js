@@ -6,28 +6,32 @@ export async function onRequest(context) {
   // --- R2 FALLBACK LOGIC ---
   const r2Status = env.BUCKET ? "Bound" : "Not Bound";
   
-  if (env.BUCKET && targetUrl) {
-    // Extract filename and remove any query strings or leading slashes
-    let filename = new URL(targetUrl).pathname.split('/').pop();
-    
-    if (filename.endsWith('.sqlite3') || filename.match(/\.(png|jpg|jpeg|webp)$/i)) {
-      try {
-        console.log(`[Proxy] R2 Lookup: "${filename}"`);
-        const object = await env.BUCKET.get(filename);
-        if (object) {
-          const headers = new Headers();
-          object.writeHttpMetadata(headers);
-          headers.set("Access-Control-Allow-Origin", "*");
-          headers.set("X-Proxy-Source", "R2-Bucket");
-          headers.set("X-R2-Status", r2Status);
-          headers.set("X-R2-Filename", filename);
-          return new Response(object.body, { headers });
-        } else {
-          console.warn(`[Proxy] R2 Miss: "${filename}" not found in bucket.`);
+  if (env.BUCKET && targetUrl && targetUrl.startsWith('http')) {
+    try {
+      const targetUrlObj = new URL(targetUrl);
+      let filename = targetUrlObj.pathname.split('/').pop();
+      
+      if (filename.endsWith('.sqlite3') || filename.match(/\.(png|jpg|jpeg|webp)$/i)) {
+        try {
+          console.log(`[Proxy] R2 Lookup: "${filename}"`);
+          const object = await env.BUCKET.get(filename);
+          if (object) {
+            const headers = new Headers();
+            object.writeHttpMetadata(headers);
+            headers.set("Access-Control-Allow-Origin", "*");
+            headers.set("X-Proxy-Source", "R2-Bucket");
+            headers.set("X-R2-Status", r2Status);
+            headers.set("X-R2-Filename", filename);
+            return new Response(object.body, { headers });
+          } else {
+            console.warn(`[Proxy] R2 Miss: "${filename}" not found in bucket.`);
+          }
+        } catch (e) {
+          console.error('[Proxy] R2 Error:', e);
         }
-      } catch (e) {
-        console.error('[Proxy] R2 Error:', e);
       }
+    } catch (e) {
+      console.warn('[Proxy] URL Parse Error:', e);
     }
   }
 
