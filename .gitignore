@@ -45,3 +45,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .ipynb_checkpoints
+
+.dev.vars*
+!.dev.vars.example
+!.env.example
