@@ -9,7 +9,7 @@ const HOST_BASES = {
 const WEB_HOSTS = Object.fromEntries(
   Object.entries(HOST_BASES).map(([board, hostBase]) => [
     board,
-    `https://${hostBase}.com`,
+    `https://api.${hostBase}.com`,
   ])
 );
 
