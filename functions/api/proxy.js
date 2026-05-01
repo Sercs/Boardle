@@ -66,6 +66,7 @@ export async function onRequest(context) {
     // Create a new response so we can modify headers
     const newResponse = new Response(response.body, response);
     newResponse.headers.set("Access-Control-Allow-Origin", "*");
+    newResponse.headers.set("X-Proxy-Origin", "boardle-proxy");
     
     return newResponse;
   } catch (err) {

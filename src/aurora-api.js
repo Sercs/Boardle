@@ -32,7 +32,7 @@ function getProxiedUrl(targetUrl) {
  * Log in to a board and return the session token
  */
 export async function login(board, username, password) {
-  const url = getProxiedUrl(`${WEB_HOSTS[board]}/sessions`);
+  const url = getProxiedUrl(`${WEB_HOSTS[board]}/api/v1/sessions`);
   
   const response = await fetch(url, {
     method: "POST",
@@ -121,7 +121,7 @@ export function getImageUrl(board, filename) {
  * Sync tables from a board
  */
 export async function* sync(board, tablesAndSyncDates, token = null, maxPages = 100) {
-  const url = getProxiedUrl(`${WEB_HOSTS[board]}/sync`);
+  const url = getProxiedUrl(`${WEB_HOSTS[board]}/api/v1/sync`);
   const headers = {
     ...DEFAULT_HEADERS,
     "Content-Type": "application/x-www-form-urlencoded",

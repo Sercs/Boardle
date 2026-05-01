@@ -41,8 +41,14 @@ export class SyncUI {
 
           <div class="sync-step">
             <p class="sync-note">If automatic sync fails, you can manually import a <b>tension.sqlite3</b> file.</p>
-            <button id="sync-import-btn" class="secondary-btn">Import Local File</button>
+            <button id="sync-import-btn" class="secondary-btn">Import Database File</button>
             <input type="file" id="sync-file-input" class="hidden" accept=".sqlite3,.sqlite,.db" />
+          </div>
+
+          <div class="sync-step">
+            <p class="sync-note">Import board background images (e.g., <b>12x12-tb2-wood.png</b>) to view them offline.</p>
+            <button id="sync-images-btn" class="secondary-btn">Import Board Images</button>
+            <input type="file" id="sync-images-input" class="hidden" accept="image/*" multiple />
           </div>
         </div>
 
@@ -72,6 +78,8 @@ export class SyncUI {
     this.overlay.querySelector('#sync-login-btn').onclick = () => this.handleAPISync();
     this.overlay.querySelector('#sync-import-btn').onclick = () => this.overlay.querySelector('#sync-file-input').click();
     this.overlay.querySelector('#sync-file-input').onchange = (e) => this.handleManualImport(e);
+    this.overlay.querySelector('#sync-images-btn').onclick = () => this.overlay.querySelector('#sync-images-input').click();
+    this.overlay.querySelector('#sync-images-input').onchange = (e) => this.handleImageImport(e);
     this.overlay.querySelector('#sync-finish-btn').onclick = () => this.hide();
 
     // Inject styles
@@ -303,6 +311,55 @@ export class SyncUI {
       this.log(`ERROR: ${err.message}`);
       alert(`Initialization Failed: ${err.message}`);
       if (!isInitialSetup) this.resetUI();
+    }
+  }
+
+  async handleImageImport(event) {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    try {
+      this.overlay.querySelector('#sync-main-content').classList.add('hidden');
+      this.overlay.querySelector('#sync-progress').classList.remove('hidden');
+      
+      let count = 0;
+      for (const file of files) {
+        this.log(`Importing ${file.name} (${count + 1}/${files.length})...`);
+        const buffer = await file.arrayBuffer();
+        
+        // Save to worker
+        const requestId = `save_img_${Date.now()}_${count}`;
+        await new Promise((resolve) => {
+          const handler = (e) => {
+            if (e.data.type === requestId) {
+              this.dbClient.worker.removeEventListener('message', handler);
+              resolve();
+            }
+          };
+          this.dbClient.worker.addEventListener('message', handler);
+          this.dbClient.worker.postMessage({ 
+            type: 'SAVE_IMAGE', 
+            payload: { filename: file.name, buffer, requestId } 
+          });
+        });
+        
+        count++;
+        const progress = Math.round((count / files.length) * 100);
+        this.overlay.querySelector('#sync-progress-bar').style.width = `${progress}%`;
+      }
+
+      this.log(`Successfully imported ${count} images!`);
+      this.overlay.querySelector('#sync-success').classList.remove('hidden');
+      this.overlay.querySelector('#sync-progress').classList.add('hidden');
+      this.overlay.querySelector('#success-message').textContent = `Imported ${count} images into local storage.`;
+
+      if (window.reinitApp) {
+        await window.reinitApp();
+      }
+    } catch (err) {
+      this.log(`ERROR: ${err.message}`);
+      alert(`Image Import Failed: ${err.message}`);
+      this.resetUI();
     }
   }
 

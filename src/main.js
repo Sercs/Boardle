@@ -104,16 +104,41 @@ async function reinitApp(readyPayload) {
   if (readyPayload.boardImages && readyPayload.boardImages.length > 0) {
     const imagesContainer = document.getElementById('board-images');
     const holdsContainer = document.getElementById('holds-container');
-    imagesContainer.innerHTML = ''; 
+    imagesContainer.innerHTML = '';
     
-    readyPayload.boardImages.forEach(filename => {
+    for (const filename of readyPayload.boardImages) {
       const img = document.createElement('img');
-      img.src = getImageUrl('tension', filename);
       img.className = 'board-layer';
-      img.alt = 'Board Layer';
-      img.onerror = () => { img.style.display = 'none'; };
+      
+      // Try local image first
+      const requestId = `get_img_${Date.now()}_${filename}`;
+      const localImagePromise = new Promise((resolve) => {
+        const handler = (e) => {
+          if (e.data.type === requestId) {
+            dbClient.worker.removeEventListener('message', handler);
+            resolve(e.data.payload);
+          }
+        };
+        dbClient.worker.addEventListener('message', handler);
+        dbClient.worker.postMessage({ type: 'GET_IMAGE', payload: { filename, requestId } });
+      });
+
+      const localBuffer = await localImagePromise;
+      if (localBuffer) {
+        const blob = new Blob([localBuffer]);
+        img.src = URL.createObjectURL(blob);
+        console.log(`[Images] Using local version of ${filename}`);
+      } else {
+        img.src = getImageUrl('tension', filename);
+        console.log(`[Images] Fetching ${filename} from API...`);
+      }
+
+      img.onerror = () => {
+        console.error(`Failed to load board image: ${filename}`);
+        img.style.display = 'none';
+      };
       imagesContainer.appendChild(img);
-    });
+    }
     imagesContainer.appendChild(holdsContainer);
   } else {
     // Fallback if no images found

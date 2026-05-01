@@ -6,12 +6,17 @@ let placements = [];
 
 const DB_NAME = 'boardle-db';
 const STORE_NAME = 'sqlite';
+const IMAGE_STORE_NAME = 'images';
 const DB_KEY = 'tension-db';
 
 async function saveToIndexedDB(buffer) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+      if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) db.createObjectStore(IMAGE_STORE_NAME);
+    };
     request.onsuccess = () => {
       const db = request.result;
       const transaction = db.transaction(STORE_NAME, 'readwrite');
@@ -27,7 +32,11 @@ async function saveToIndexedDB(buffer) {
 async function loadFromIndexedDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+      if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) db.createObjectStore(IMAGE_STORE_NAME);
+    };
     request.onsuccess = () => {
       const db = request.result;
       const transaction = db.transaction(STORE_NAME, 'readonly');
@@ -757,6 +766,39 @@ self.onmessage = async function(e) {
       self.onmessage({ data: { type: 'INIT', payload: {} } });
     } catch (e) {
       console.error('[Worker] Replace DB Error:', e);
+      self.postMessage({ type: 'ERROR', payload: e.message });
+    }
+    return;
+  }
+  if (type === 'SAVE_IMAGE') {
+    const { filename, buffer } = payload;
+    try {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(IMAGE_STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(IMAGE_STORE_NAME);
+        store.put(buffer, filename);
+        transaction.oncomplete = () => self.postMessage({ type: payload.requestId, payload: 'Image saved' });
+      };
+    } catch (e) {
+      self.postMessage({ type: 'ERROR', payload: e.message });
+    }
+    return;
+  }
+
+  if (type === 'GET_IMAGE') {
+    const { filename } = payload;
+    try {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const transaction = db.transaction(IMAGE_STORE_NAME, 'readonly');
+        const store = transaction.objectStore(IMAGE_STORE_NAME);
+        const getRequest = store.get(filename);
+        getRequest.onsuccess = () => self.postMessage({ type: payload.requestId, payload: getRequest.result });
+      };
+    } catch (e) {
       self.postMessage({ type: 'ERROR', payload: e.message });
     }
     return;
