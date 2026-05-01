@@ -7,6 +7,9 @@ export default {
     const bucket = env.BUCKET || Object.values(env).find(v => v && typeof v.get === 'function');
     const r2Status = bucket ? "Bound" : "Not Bound";
     
+    // Version marker to confirm deployment
+    const WORKER_VERSION = "boardle-worker-v3";
+    
     if (bucket && targetUrl && targetUrl.startsWith('http')) {
       try {
         const targetUrlObj = new URL(targetUrl);
@@ -22,6 +25,7 @@ export default {
               headers.set("X-Proxy-Source", "R2-Bucket");
               headers.set("X-R2-Status", r2Status);
               headers.set("X-R2-Filename", filename);
+              headers.set("X-Worker-Version", WORKER_VERSION);
               return new Response(object.body, { headers });
             }
           } catch (e) {
@@ -35,7 +39,7 @@ export default {
 
     if (!targetUrl) {
       // If it's not a proxy request, just let the static assets handle it
-      return new Response(null, { status: 404 });
+      return new Response(`Boardle Worker (${WORKER_VERSION})`, { status: 200 });
     }
 
     // Standard Proxy Fallback
@@ -54,7 +58,7 @@ export default {
 
       const newResponse = new Response(response.body, response);
       newResponse.headers.set("Access-Control-Allow-Origin", "*");
-      newResponse.headers.set("X-Proxy-Origin", "boardle-worker-v2");
+      newResponse.headers.set("X-Proxy-Origin", WORKER_VERSION);
       newResponse.headers.set("X-R2-Status", r2Status);
       return newResponse;
     } catch (err) {

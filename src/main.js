@@ -3,15 +3,13 @@ import { RadialMenu } from './radial-menu.js';
 import { BottomSheet } from './bottom-sheet.js';
 import { BluetoothAPI } from './bluetooth.js';
 import { Logbook } from './logbook.js';
-import { SyncUI } from './sync-ui.js';
-import { getImageUrl } from './aurora-api.js';
+import { getImageUrl, fetchDatabase } from './aurora-api.js';
 
 let dbClient;
 let radialMenu;
 let bottomSheet;
 let bluetoothController;
 let logbook;
-let syncUI;
 
 let placements = []; // { id, x, y }
 let ledMapping = {}; // { id: position }
@@ -80,27 +78,23 @@ let touchStartY = 0;
 let hadMapModeThisSession = false;
 // ... (omitted middle code for brevity)
 
-window.reinitApp = async function(readyPayload) {
+async function reinitializeUI(readyPayload) {
   // If no payload provided, request it from the worker
   if (!readyPayload) {
     const requestId = `refresh_state_${Date.now()}`;
     readyPayload = await new Promise(resolve => {
       const handler = (e) => {
-        if (e.data.type === 'READY') {
+        if (e.data.type === requestId || e.data.type === 'READY') {
           dbClient.worker.removeEventListener('message', handler);
           resolve(e.data.payload);
         }
       };
       dbClient.worker.addEventListener('message', handler);
-      dbClient.worker.postMessage({ type: 'GET_STATE' }); // We'll add this handler to the worker
+      dbClient.worker.postMessage({ type: 'GET_STATE', payload: { requestId } }); 
     });
   }
 
   // Check sync status now that DB is ready
-  if (syncUI) {
-    syncUI.isLocal = readyPayload.isLocal;
-    syncUI.updateButtonStatus();
-  }
   
   // Show/Hide Setup Screen
   const setupScreen = document.getElementById('setup-screen');
@@ -170,6 +164,8 @@ window.reinitApp = async function(readyPayload) {
     updateFilterDropdowns();
   }
 }
+
+window.reinitApp = reinitializeUI;
 
 class CoPilot {
   constructor() {
@@ -469,8 +465,8 @@ class SetterController {
       });
     });
 
-    const setterHandle = document.getElementById('setter-handle');
-    setterHandle.addEventListener('click', (e) => {
+    const setterPill = document.getElementById('setter-pill');
+    setterPill.addEventListener('click', (e) => {
       e.stopPropagation();
       if (document.getElementById('filter-sidebar').classList.contains('open') || 
           document.getElementById('info-sidebar').classList.contains('open')) {
@@ -604,6 +600,7 @@ async function init() {
   dbClient.setOnResults(handleRoutesUpdate);
   bluetoothController = new BluetoothAPI();
   logbook = new Logbook();
+  updateIndicatorUI();
 
   radialMenu = new RadialMenu(
     document.getElementById('radial-menu'),
@@ -612,27 +609,38 @@ async function init() {
 
   bottomSheet = new BottomSheet(document.getElementById('bottom-sheet'));
   setterController = new SetterController();
-  syncUI = new SyncUI(dbClient);
-
-  document.getElementById('sync-open-btn').onclick = () => syncUI.show();
 
   // Initial Setup Screen logic
   const setupBtn = document.getElementById('setup-fetch-btn');
   if (setupBtn) {
-    setupBtn.onclick = () => {
+    setupBtn.onclick = async () => {
       const progressContainer = document.getElementById('setup-progress-container');
+      const statusText = document.getElementById('setup-status');
+      const progressFill = document.getElementById('setup-progress-fill');
+      
       if (progressContainer) progressContainer.classList.remove('hidden');
       setupBtn.classList.add('hidden');
 
-      syncUI.handleAPKDownload({
-        isInitialSetup: true,
-        onComplete: () => {
-          const screen = document.getElementById('setup-screen');
-          if (screen) screen.classList.add('hidden');
-          showToast("Boardle Initialized!", 3000);
-          if (window.reinitApp) window.reinitApp();
-        }
-      });
+      try {
+        if (statusText) statusText.textContent = 'Connecting to cloud storage...';
+        
+        const buffer = await fetchDatabase('tension');
+        
+        if (statusText) statusText.textContent = 'Installing database...';
+        if (progressFill) progressFill.style.width = '50%';
+        
+        await dbClient.replaceDatabase(buffer);
+        
+        if (progressFill) progressFill.style.width = '100%';
+        const screen = document.getElementById('setup-screen');
+        if (screen) screen.classList.add('hidden');
+        showToast("Boardle Initialized!", 3000);
+        if (window.reinitApp) await window.reinitApp();
+      } catch (err) {
+        alert(`Initialization Failed: ${err.message}`);
+        setupBtn.classList.remove('hidden');
+        if (progressContainer) progressContainer.classList.add('hidden');
+      }
     };
   }
 
@@ -714,7 +722,7 @@ async function init() {
     const readyPayload = await dbClient.refreshBoardState();
     
     // 2. Re-initialize board data (placements, images, etc.)
-    await reinitApp(readyPayload);
+    await reinitializeUI(readyPayload);
     
     // 3. Ensure board is visually empty
     renderRoute(null);
@@ -732,9 +740,17 @@ async function init() {
     btBtn.onclick = () => handleConnectBoard(true);
   }
 
+  bottomSheet.setOnSwipe((direction) => {
+    if (direction === 'left') {
+      switchTab(true); // Switch to History
+    } else {
+      switchTab(false); // Switch to Discover
+    }
+  });
+
   bottomSheet.setOnTap((e) => {
-    // Only toggle if we didn't click a tab, button, or interactive element
-    if (e && (e.target.closest('.bs-tab-btn') || e.target.closest('button') || e.target.closest('input') || e.target.closest('.role-ring'))) return;
+    // Only toggle if we clicked the pill
+    if (!e.target.closest('#bottom-sheet-pill')) return;
 
     if (document.getElementById('filter-sidebar').classList.contains('open') || 
         document.getElementById('info-sidebar').classList.contains('open')) {
@@ -749,7 +765,6 @@ async function init() {
     const indicator = (connectionStatus === 'connected') ? "🟢" : "🔴";
     const statusLabel = (connectionStatus === 'connected') ? "Connected" : "Disconnected";
     const modeLabel = isLiveMode ? "Live" : "Passive";
-    
     
     showToast(`${indicator} ${statusLabel} ${modeLabel}`);
 
@@ -2229,17 +2244,17 @@ function handleRoutesUpdate(payload) {
 }
 
 function updateIndicatorUI() {
-  const bsh = document.getElementById('bottom-sheet-handle');
-  const sh = document.getElementById('setter-handle');
-  if (!bsh) return;
+  const bsp = document.getElementById('bottom-sheet-pill');
+  const sp = document.getElementById('setter-pill');
+  if (!bsp) return;
 
-  const handles = [bsh];
-  if (sh) handles.push(sh);
+  const pills = [bsp];
+  if (sp) pills.push(sp);
 
-  handles.forEach(h => {
-    h.classList.remove('disconnected', 'connected', 'passive', 'live');
-    h.classList.add(connectionStatus);
-    h.classList.add(isLiveMode ? 'live' : 'passive');
+  pills.forEach(p => {
+    p.classList.remove('disconnected', 'connected', 'passive', 'live');
+    p.classList.add(connectionStatus);
+    p.classList.add(isLiveMode ? 'live' : 'passive');
   });
 }
 

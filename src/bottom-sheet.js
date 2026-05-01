@@ -56,12 +56,16 @@ export class BottomSheet {
     if (e.target.closest('#route-list')) return;
     
     this.isDragging = true;
+    this.isDraggingVertically = false;
+    this.swipeDetected = false;
+    this.startedOnHandle = !!e.target.closest('#bottom-sheet-handle') || !!e.target.closest('#status-bar');
+    
     this.element.classList.add('dragging');
     this.startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
     this.startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
     this.dragStartTime = performance.now();
     this.dragStartDist = 0;
-    this.lastStartEvent = e; // Store to pass to tap callback
+    this.lastStartEvent = e; 
     
     this.lastY = this.translateY;
     this.lastTime = performance.now();
@@ -71,43 +75,69 @@ export class BottomSheet {
   onDragMove(e) {
     if (!this.isDragging) return;
     
-    // Prevent default scroll
-    if (e.type === 'touchmove') e.preventDefault();
-    
-    const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-    const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchstart' || e.type === 'touchmove' ? (e.touches ? e.touches[0].clientY : e.clientY) : e.clientY;
+    const clientX = e.type === 'touchstart' || e.type === 'touchmove' ? (e.touches ? e.touches[0].clientX : e.clientX) : e.clientX;
     const deltaY = clientY - this.startY;
     const deltaX = clientX - this.startX;
     
-    this.dragStartDist = Math.hypot(deltaX, deltaY);
+    // Directional lock: once we decide it's a drag or a swipe, stick with it
+    if (!this.swipeDetected && !this.isDraggingVertically) {
+      if (this.startedOnHandle && Math.abs(deltaX) > 15 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
+        this.swipeDetected = true;
+      } else if (Math.abs(deltaY) > 5) {
+        this.isDraggingVertically = true;
+      }
+    }
 
-    let newY = this.lastY + deltaY;
-    
-    // Free adjust: strictly clamp values without rubber banding
-    if (newY < this.minY) newY = this.minY;
-    if (newY > this.maxY) newY = this.maxY;
-    
-    this.translateY = newY;
-    this.updatePosition();
-    
-    const now = performance.now();
-    const dt = now - this.lastTime;
-    if (dt > 0) {
-      this.velocity = (deltaY) / dt; 
-      this.lastTime = now;
+    if (this.swipeDetected) {
+      if (e.cancelable) e.preventDefault();
+      return; // Horizontal swipe active, ignore vertical movement
+    }
+
+    if (this.isDraggingVertically) {
+      if (e.type === 'touchmove') e.preventDefault();
+      
+      this.dragStartDist = Math.hypot(deltaX, deltaY);
+
+      let newY = this.lastY + deltaY;
+      
+      // Free adjust: strictly clamp values
+      if (newY < this.minY) newY = this.minY;
+      if (newY > this.maxY) newY = this.maxY;
+      
+      this.translateY = newY;
+      this.updatePosition();
+      
+      const now = performance.now();
+      const dt = now - this.lastTime;
+      if (dt > 0) {
+        this.velocity = (deltaY) / dt; 
+        this.lastTime = now;
+      }
     }
   }
 
-  onDragEnd() {
+  onDragEnd(e) {
     if (!this.isDragging) return;
     
     const duration = performance.now() - this.dragStartTime;
-    if (duration < 200 && this.dragStartDist < 10) {
+    const clientX = e.type === 'touchend' ? (e.changedTouches ? e.changedTouches[0].clientX : this.startX) : e.clientX;
+    const deltaX = clientX - this.startX;
+
+    if (this.swipeDetected && Math.abs(deltaX) > 50) {
+      if (this.onSwipeCallback) this.onSwipeCallback(deltaX > 0 ? 'right' : 'left');
+    } else if (duration < 200 && Math.hypot(deltaX, (e.clientY || this.startY) - this.startY) < 10) {
       if (this.onTapCallback) this.onTapCallback(this.lastStartEvent);
     }
 
     this.isDragging = false;
+    this.isDraggingVertically = false;
+    this.swipeDetected = false;
     this.element.classList.remove('dragging');
+  }
+
+  setOnSwipe(callback) {
+    this.onSwipeCallback = callback;
   }
 
   setOnTap(callback) {

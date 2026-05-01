@@ -41,9 +41,6 @@ export async function onRequest(context) {
     'tensionboardapp2.com',
     'kilterboard.com',
     'grasshopperboard.com',
-    'apkpure.net',
-    'apkpure.com',
-    'winudf.com',
     'googleusercontent.com'
   ];
 
@@ -69,14 +66,8 @@ export async function onRequest(context) {
     // Remove headers that might cause issues, but KEEP 'origin' for POST requests
     headers.delete("host");
     
-    // Set a fake referer to look like we're coming from the APKPure site
-    if (targetUrl.includes('apkpure') || targetUrl.includes('winudf')) {
-      headers.set("Referer", "https://apkpure.com/");
-      headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-    } else {
-      headers.delete("referer");
-      headers.set("User-Agent", "Kilter%20Board/202 CFNetwork/1568.100.1 Darwin/24.0.0");
-    }
+    headers.delete("referer");
+    headers.set("User-Agent", "Kilter%20Board/202 CFNetwork/1568.100.1 Darwin/24.0.0");
 
     // Handle the custom token header we use to pass session info
     const token = headers.get("X-Aurora-Token");

@@ -7,9 +7,7 @@ export default {
       'auroraclimbing.com',
       'tensionboardapp2.com',
       'kilterboard.com',
-      'grasshopperboard.com',
-      'apkpure.net',
-      'apkpure.com'
+      'grasshopperboard.com'
     ];
 
     const isAllowed = allowedHosts.some(host => targetUrl && targetUrl.includes(host));

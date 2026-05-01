@@ -72,7 +72,7 @@ export async function fetchDatabase(board) {
   console.log(`[Database] Proxy Response: ${response.status} (${response.headers.get('X-Proxy-Source') || 'Internet'})`);
   
   if (!response.ok) {
-    throw new Error(`Direct fetch failed: ${response.status}. Check if tension.sqlite3 exists in R2.`);
+    throw new Error(`Direct fetch failed: ${response.status}`);
   }
 
   // Check if it's actually a sqlite file (starts with "SQLite format 3")
@@ -85,55 +85,6 @@ export async function fetchDatabase(board) {
   return buffer;
 }
 
-// Helper to download the official APK and extract the starter database (BoardLib style)
-export async function downloadAPKDatabase(board) {
-  const packageNames = {
-    "aurora": "auroraboard",
-    "tension": "tensionboard2",
-    "kilter": "kilterboard",
-    "grasshopper": "grasshopperboard"
-  };
-
-  const packageName = packageNames[board] || packageNames['tension'];
-  const apkUrl = `https://d.apkpure.net/b/APK/com.auroraclimbing.${packageName}?version=latest`;
-  
-  console.log(`[APK] Downloading ${board} APK from APKPure...`);
-  const proxyUrl = `${PROXY_URL}?url=${encodeURIComponent(apkUrl)}`;
-  
-  const response = await fetch(proxyUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
-    }
-  });
-
-  if (!response.ok) throw new Error(`Failed to download APK: ${response.status}`);
-
-  const bundleBlob = await response.blob();
-  
-  // Load JSZip dynamically
-  const JSZip = (await import('https://cdn.skypack.dev/jszip')).default;
-  const zip = new JSZip();
-  const bundle = await zip.loadAsync(bundleBlob);
-
-  console.log(`[APK] Extracting database...`);
-  
-  // APKPure sometimes serves an XAPK (a zip containing the APK)
-  let dbFile;
-  const apkEntry = bundle.file(`com.auroraclimbing.${packageName}.apk`);
-  
-  if (apkEntry) {
-    const apkBlob = await apkEntry.async('blob');
-    const mainZip = await zip.loadAsync(apkBlob);
-    dbFile = mainZip.file('assets/db.sqlite3');
-  } else {
-    // Direct APK
-    dbFile = bundle.file('assets/db.sqlite3');
-  }
-
-  if (!dbFile) throw new Error('Could not find assets/db.sqlite3 in APK');
-
-  return await dbFile.async('arraybuffer');
-}
 
 export function getImageUrl(board, filename) {
   const apiHost = `https://api.${HOST_BASES[board]}.com`;

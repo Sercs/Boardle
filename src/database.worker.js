@@ -838,7 +838,7 @@ async function getDatabaseState(isLocal = true) {
   if (type === 'GET_STATE') {
     // Return the same payload we send on init
     const state = await getDatabaseState();
-    self.postMessage({ type: 'READY', payload: state });
+    self.postMessage({ type: payload?.requestId || 'READY', payload: state });
     return;
   }
 };

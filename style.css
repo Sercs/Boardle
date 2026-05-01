@@ -360,9 +360,8 @@ main {
   left: calc(50% + 30px);
 }
 
-#bottom-sheet-handle::after,
-#setter-handle::after {
-  content: '';
+#bottom-sheet-pill,
+#setter-pill {
   width: 40px;
   height: 6px;
   background: var(--bs-handle);
@@ -370,29 +369,31 @@ main {
   transition: all 0.4s ease;
   box-shadow: 0 0 0 rgba(34, 197, 94, 0);
   opacity: 1;
+  pointer-events: auto; /* Ensure it catches clicks even if parent has different behavior */
+  z-index: 20;
 }
 
 /* Base states: Color comes from either the .connected status or a default gray */
-#bottom-sheet-handle.disconnected,
-#setter-handle.disconnected {
+#bottom-sheet-pill.disconnected,
+#setter-pill.disconnected {
   --status-color: rgba(255, 255, 255, 0.2);
   --status-glow: rgba(255, 255, 255, 0.1);
 }
 
-#bottom-sheet-handle.connected,
-#setter-handle.connected {
+#bottom-sheet-pill.connected,
+#setter-pill.connected {
   --status-color: #22c55e;
   --status-glow: rgba(34, 197, 94, 0.6);
 }
 
-#bottom-sheet-handle.passive::after,
-#setter-handle.passive::after {
+#bottom-sheet-pill.passive,
+#setter-pill.passive {
   background: var(--status-color);
   animation: handle-pulse 2s infinite ease-in-out;
 }
 
-#bottom-sheet-handle.live::after,
-#setter-handle.live::after {
+#bottom-sheet-pill.live,
+#setter-pill.live {
   background: var(--status-color);
   box-shadow: 0 0 12px var(--status-glow);
 }
@@ -1507,8 +1508,8 @@ body.dragging-setter #setter-role-selector {
 }
 
 .setup-card h1 {
-  font-size: 2.5rem;
-  margin-bottom: 15px;
+  font-size: 3.2rem;
+  margin-bottom: 20px;
   background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1519,7 +1520,7 @@ body.dragging-setter #setter-role-selector {
   color: rgba(255, 255, 255, 0.6);
   line-height: 1.6;
   margin-bottom: 30px;
-  font-size: 1.1rem;
+  font-size: 1.4rem;
 }
 
 #setup-fetch-btn {
@@ -1528,7 +1529,7 @@ body.dragging-setter #setter-role-selector {
   border: none;
   padding: 18px 36px;
   border-radius: 16px;
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -1543,6 +1544,12 @@ body.dragging-setter #setter-role-selector {
 
 #setup-fetch-btn:active {
   transform: translateY(0);
+}
+
+#setup-import-btn {
+  font-size: 1.4rem;
+  padding: 18px 36px;
+  border-radius: 16px;
 }
 
 #setup-progress-container {
@@ -1568,5 +1575,29 @@ body.dragging-setter #setter-role-selector {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.4);
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* Tutorial Utility Classes */
+.inline-handle {
+  display: inline-block;
+  width: 30px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  vertical-align: middle;
+  margin: 0 4px;
+  transition: all 0.3s ease;
+}
+.inline-handle.connected { background: #22c55e; }
+.inline-handle.passive { background: #22c55e; animation: handle-pulse 2s infinite ease-in-out; }
+.inline-handle.live { background: #22c55e; box-shadow: 0 0 10px rgba(34, 197, 94, 0.6); }
+
+.inline-icon {
+  height: 1.2em;
+  width: auto;
+  vertical-align: middle;
+  margin: 0 2px;
+  filter: brightness(0) invert(1);
+  opacity: 0.8;
 }
 
