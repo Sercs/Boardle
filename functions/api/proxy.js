@@ -43,8 +43,12 @@ export async function onRequest(context) {
       headers.delete("X-Aurora-Token");
     }
 
-    // Impersonate the official app
-    headers.set("User-Agent", "Kilter%20Board/202 CFNetwork/1568.100.1 Darwin/24.0.0");
+    // 5. IDENTITY: Use a browser UA for APKPure and a mobile UA for climbing APIs
+    if (targetUrl.includes('apkpure')) {
+      headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+    } else {
+      headers.set("User-Agent", "Kilter%20Board/202 CFNetwork/1568.100.1 Darwin/24.0.0");
+    }
 
     const body = (request.method !== "GET" && request.method !== "HEAD") 
       ? await request.arrayBuffer() 
