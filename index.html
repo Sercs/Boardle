@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="/icons/logo.svg" />
+  <link rel="apple-touch-icon" href="/icons/logo.svg" />
+  <title>Tension Board 2 PWA</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <aside id="info-sidebar">
+      <div class="sidebar-header">
+        <button id="info-close">×</button>
+        <h2>Info & Tutorial</h2>
+      </div>
+      
+      <div class="info-content">
+        <section class="tutorial-section">
+          <h3>🔍 Discovery & Filters</h3>
+          <ul>
+            <li>Tap the <strong>( ≡ ) Menu</strong> button at the top-right to filter routes by Grade, Angle, Holder, and more.</li>
+            <li>The <strong>Bottom Sheet</strong> tracks your search results:
+              <ul>
+                <li><strong>Drag Handle</strong> up or down to adjust your browsing space.</li>
+                <li><strong>Tap</strong> a climb to select and light it on the board.</li>
+                <li><strong>Swipe Right</strong> on a climb entry to mark it as <strong>Sent</strong>.</li>
+              </ul>
+            </li>
+          </ul>
+        </section>
+
+        <section class="tutorial-section">
+          <h3>🧗 Hold Interaction</h3>
+          <ul>
+            <li><strong>Quick Tap</strong>: Instantly mark a hold for a general search.</li>
+            <li><strong>Long Press (Hold)</strong>: Open the <strong>Radial Scope</strong>.
+              <ul>
+                <li>Drag into a color-coded quadrant (e.g. <strong>Foot-only</strong>) and release to set a specific hold role.</li>
+              </ul>
+            </li>
+          </ul>
+        </section>
+
+        <section class="tutorial-section">
+          <h3>🎮 Board Manipulation</h3>
+          <ul>
+            <li><strong>Scope Mode</strong>: Tap and hold with <strong>2 fingers</strong> to lock into panning. You can also release a finger to continue panning.</li>
+            <li><strong>Pinch</strong> anywhere to <strong>Zoom</strong>. <strong>Zooming out significantly</strong> will <strong>Elastic Re-center</strong> the board to the middle.</li>
+            <li><strong>Double Tap</strong> empty space to <strong>Quick Re-connect</strong> to the board if a session is established.</li>
+            <li><strong>Flick Navigation</strong>: Swipe horizontally (Left/Right) on the board to cycle through your current climb list.</li>
+          </ul>
+        </section>
+
+        <section class="about-section">
+          <h3>About Boardle</h3>
+          <p>A companion app to the tension board 2 for seamless searching and sends!</p>
+        </section>
+
+        <section class="philosophy-section">
+          <h3>✨ UI/UX Philosophy</h3>
+          <ul>
+            <li><strong>Board Takes Center Stage</strong>: All controls are tucked away or overlayed only when needed, keeping your focus on the climbing surface.</li>
+            <li><strong>Radial Accessibility</strong>: Every hold role is accessible with a single gesture and the same number of inputs—consistency is key.</li>
+            <li><strong>Simultaneous Visibility</strong>: Browse the climb list without ever covering the board, allowing for instant recognition of routes.</li>
+            <li><strong>Frictionless Logging</strong>: Record your sends with a single swipe, minimizing time spent in the app so you can get back to the wall.</li>
+          </ul>
+        </section>
+      </div>
+    </aside>
+
+    <aside id="filter-sidebar">
+      <div class="sidebar-header" style="margin-bottom: 15px;">
+        <h2>Filters</h2>
+        <button id="sidebar-close">×</button>
+      </div>
+
+      <div class="filter-section" style="margin-bottom: 25px; display: flex; flex-direction: column; gap: 10px;">
+        <button id="bluetooth-connect-btn" style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.5); color: #3b82f6; width: 100%; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;">
+          <span style="font-size: 1.2rem;">⚡</span> Connect Board
+        </button>
+        <button id="sync-open-btn" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: white; width: 100%; border-radius: 8px; padding: 12px; cursor: pointer; font-weight: bold;">
+          Sync Database
+        </button>
+      </div>
+
+      <div class="filter-section" style="margin-bottom: 15px;">
+        <button id="clear-all-filters-btn" class="clear-btn inactive">Clear All Filters</button>
+        <button id="clear-hold-filters-btn" class="clear-btn inactive">Clear Holds</button>
+      </div>
+
+      <div class="filter-section">
+        <h3>Search</h3>
+        <div class="search-controls">
+          <input type="text" id="route-name-input" placeholder="Route Name..." autocomplete="one-time-code" autocorrect="off" spellcheck="false"/>
+          <div class="setter-search-wrapper">
+            <span class="setter-prefix" style="color: rgba(255,255,255,0.5); font-style: italic; margin-right: 8px;">by</span>
+            <input type="text" id="setter-name-input" placeholder="Setter Name..." autocomplete="one-time-code" autocorrect="off" spellcheck="false"/>
+          </div>
+        </div>
+      </div>
+      
+
+      
+      <div class="filter-section">
+        <h3>Angles</h3>
+        <div id="angle-toggles" class="chic-toggles"></div>
+      </div>
+      
+      <div class="filter-section">
+        <h3>Difficulty</h3>
+        <div class="difficulty-controls" style="margin-bottom: 12px;">
+          <button id="padlock-btn" class="unlocked">
+            <img id="padlock-img" src="/icons/unlock.svg" alt="Padlock" style="width: 20px; height: 20px;" />
+          </button>
+          <select id="min-grade-select"></select>
+          <select id="max-grade-select"></select>
+        </div>
+        <label style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.7); font-size: 0.9rem; cursor: pointer;">
+          <input type="checkbox" id="include-ungraded-cb" checked />
+          Include Ungraded Climbs
+        </label>
+      </div>
+
+      <div class="filter-section">
+        <h3>Length (Holds)</h3>
+        <div class="difficulty-controls" style="margin-bottom: 12px;">
+          <button id="length-padlock-btn" class="unlocked">
+            <img id="length-padlock-img" src="/icons/unlock.svg" alt="Padlock" style="width: 20px; height: 20px;" />
+          </button>
+          <select id="min-length-select"></select>
+          <select id="max-length-select"></select>
+        </div>
+      </div>
+      
+      <div class="filter-section">
+        <h3>My Climbs</h3>
+        <div class="status-filters">
+          <div class="status-group">
+            <div class="status-label">Sent</div>
+            <div id="sent-toggles" class="chic-toggles">
+              <button data-value="all" class="active">All</button>
+              <button data-value="only">Only</button>
+              <button data-value="hide">Hide</button>
+            </div>
+          </div>
+          <div class="status-group">
+            <div class="status-label">Rated</div>
+            <div id="rated-toggles" class="chic-toggles">
+              <button data-value="all" class="active">All</button>
+              <button data-value="only">Only</button>
+              <button data-value="hide">Hide</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="filter-section">
+        <h3>Order By</h3>
+        <div class="order-controls" style="margin-bottom: 12px;">
+          <select id="order-select">
+            <option value="difficulty">Difficulty</option>
+            <option value="popularity">Popularity</option>
+            <option value="quality">Quality</option>
+            <option value="length">Length</option>
+            <option value="alphabetical">Alphabetical</option>
+            <option value="newest">Newest</option>
+            <option value="random">Feeling Lucky</option>
+          </select>
+          <button id="order-reverse-btn">↓</button>
+        </div>
+        
+        <div class="nested-filter" id="secondary-order-container">
+          <h3 style="margin-bottom: 12px; font-size: 0.8rem;">Then By</h3>
+          <div class="order-controls">
+            <select id="secondary-order-select">
+              <option value="none">None</option>
+              <option value="difficulty">Difficulty</option>
+              <option value="popularity">Popularity</option>
+              <option value="quality">Quality</option>
+              <option value="length">Length</option>
+              <option value="alphabetical">Alphabetical</option>
+              <option value="newest">Newest</option>
+              <option value="random">Feeling Lucky</option>
+            </select>
+            <button id="secondary-order-reverse-btn">↓</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <h3>Settings</h3>
+        <label style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.7); font-size: 0.9rem; cursor: pointer;">
+          <input type="checkbox" id="hide-info-btn-cb" />
+          Hide Info Button
+        </label>
+      </div>
+    </aside>
+
+    <div id="setup-screen" class="hidden">
+      <div class="setup-card">
+        <h1>Boardle</h1>
+        <p>No database found. To begin, we need to fetch the board data and climb library.</p>
+
+        <button id="setup-fetch-btn">Fetch Database</button>
+        
+        <div id="setup-progress-container" class="hidden">
+          <div class="setup-progress-bar">
+            <div id="setup-progress-fill"></div>
+          </div>
+          <div id="setup-status">Connecting to server...</div>
+        </div>
+      </div>
+    </div>
+
+    <main id="app">
+      <header id="setter-overlay" class="hidden">
+        <div class="setter-content">
+          <div class="setter-info">
+            <h1>Edit Mode</h1>
+
+            <p>Set your route</p>
+          </div>
+          <div class="setter-actions">
+            <button id="setter-clear-btn" title="Clear All"><img src="/icons/trash-2.svg" alt="Clear"></button>
+            <button id="setter-wand-btn" title="Toggle AI Co-Pilot"><img src="/icons/cpu.svg" alt="AI"></button>
+          </div>
+
+        </div>
+        <div id="setter-handle-zone">
+          <div id="setter-handle"></div>
+        </div>
+      </header>
+
+
+
+      <button id="info-toggle"><img src="/icons/info.svg" alt="Info"></button>
+      <button id="sidebar-toggle">≡</button>
+
+
+      <main id="board-container">
+        <header id="climb-header">
+          <h1 id="climb-name">Select a Climb</h1>
+          <p id="climb-setter"></p>
+          <div id="climb-stats-header" style="display: flex; justify-content: center; align-items: center; gap: 20px; color: rgba(255,255,255,0.4); font-size: 0.85rem; margin-top: 8px;"></div>
+        </header>
+        <div id="board-images">
+          <img src="/tension-images/product_sizes_layouts_sets/12x12-tb2-wood.png" alt="Wood Board" id="board-wood" class="board-layer" onerror="this.style.display='none'"/>
+          <img src="/tension-images/product_sizes_layouts_sets/12x12-tb2-plastic.png" alt="Plastic Board" id="board-plastic" class="board-layer" onerror="this.style.display='none'"/>
+          <div id="holds-container"></div>
+        </div>
+        <p id="climb-description"></p>
+        
+        <!-- Radial Menu -->
+        <div id="radial-menu" class="hidden">
+          <div class="sectors-wrapper">
+            <div class="sector sector-start" data-role="start"><span>Start</span></div>
+            <div class="sector sector-foot" data-role="foot"><span>Foot</span></div>
+            <div class="sector sector-middle" data-role="middle"><span>Middle</span></div>
+            <div class="sector sector-finish" data-role="finish"><span>Finish</span></div>
+          </div>
+          <div class="crosshair-h"></div>
+          <div class="crosshair-v"></div>
+          <div class="center-indicator"></div>
+        </div>
+
+        <div id="setter-role-selector">
+          <div class="role-ring start" data-role="5" title="Start Hold"></div>
+          <div class="role-ring middle active" data-role="6" title="Middle Hold"></div>
+          <div class="role-ring foot" data-role="8" title="Foot Hold"></div>
+          <div class="role-ring finish" data-role="7" title="Finish Hold"></div>
+        </div>
+      </main>
+
+      <!-- Bottom Sheet -->
+      <aside id="bottom-sheet" class="collapsed">
+        <div id="bottom-sheet-handle">
+          <div class="bs-tab-btn left active" id="tab-discover">Discover</div>
+          <div class="bs-tab-btn right" id="tab-history">History</div>
+        </div>
+        <div id="bottom-sheet-content">
+          <div id="status-bar">
+            <div id="normal-status">
+              <span id="route-count">0 routes found</span>
+            </div>
+            <div id="recommendation-status" class="hidden">
+              <div class="rec-controls-left">
+                <button id="rec-filter-btn" class="text-btn">Filters: ON</button>
+              </div>
+              <div class="rec-title-group">
+                <span id="rec-title">Similar to ...</span>
+                <span id="rec-subtitle">10 matches found</span>
+              </div>
+              <div class="rec-controls-right">
+                <button id="rec-back-btn" title="Previous Recommendation">
+                  <img src="/icons/chevron-left.svg" alt="Back">
+                </button>
+                <button id="rec-home-btn" title="Return to Search">
+                  <img src="/icons/home.svg" alt="Home">
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="route-list"></div>
+        </div>
+      </aside>
+
+      <div id="toast" class="hidden"></div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <script type="module" src="/src/main.js"></script>
+
+  </body>
+</html>
