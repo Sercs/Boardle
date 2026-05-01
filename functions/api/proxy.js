@@ -4,10 +4,10 @@ export async function onRequest(context) {
   const targetUrl = url.searchParams.get("url");
 
   // --- R2 FALLBACK LOGIC ---
-  // If you bind an R2 bucket named 'BUCKET', we check there first for assets.
+  const r2Status = env.BUCKET ? "Bound" : "Not Bound";
+  
   if (env.BUCKET && targetUrl) {
     const filename = targetUrl.split('/').pop();
-    // Only check R2 for sqlite or image files
     if (filename.endsWith('.sqlite3') || filename.match(/\.(png|jpg|jpeg|webp)$/i)) {
       try {
         const object = await env.BUCKET.get(filename);
@@ -16,6 +16,7 @@ export async function onRequest(context) {
           object.writeHttpMetadata(headers);
           headers.set("Access-Control-Allow-Origin", "*");
           headers.set("X-Proxy-Source", "R2-Bucket");
+          headers.set("X-R2-Status", r2Status);
           return new Response(object.body, { headers });
         }
       } catch (e) {
@@ -88,6 +89,7 @@ export async function onRequest(context) {
     const newResponse = new Response(response.body, response);
     newResponse.headers.set("Access-Control-Allow-Origin", "*");
     newResponse.headers.set("X-Proxy-Origin", "boardle-proxy");
+    newResponse.headers.set("X-R2-Status", r2Status);
     
     return newResponse;
   } catch (err) {
