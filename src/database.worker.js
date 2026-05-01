@@ -163,51 +163,58 @@ self.onmessage = async function(e) {
       // SHARED LOGIC for INIT and READY (Fetch board state)
       if (!db) throw new Error('Database not initialized');
 
-      const res = db.exec(`
-        SELECT p.id, h.x, h.y, l.position
-        FROM placements p 
-        JOIN holes h ON p.hole_id = h.id 
-        LEFT JOIN leds l ON h.id = l.hole_id
-        WHERE p.layout_id = 11 AND (l.product_size_id = 6 OR l.product_size_id IS NULL)
-      `);
-      
-      let ledMapping = {};
-      let placements = [];
-      if (res.length > 0) {
-        placements = res[0].values.map(row => {
-          if (row[3] !== null) ledMapping[row[0]] = row[3];
-          return { id: row[0], x: row[1], y: row[2] };
-        });
-      }
-
-      let angles = [15, 20, 25, 30, 35, 40, 45, 50, 55];
-      try {
-        const angRes = db.exec(`SELECT angle FROM products_angles WHERE product_id = 5 ORDER BY angle ASC`);
-        if (angRes.length > 0) angles = angRes[0].values.map(r => r[0]);
-      } catch(e) {}
-
-      let grades = [];
-      try {
-        const diffRes = db.exec(`SELECT difficulty, boulder_name FROM difficulty_grades WHERE is_listed = 1 ORDER BY difficulty ASC`);
-        if (diffRes.length > 0) grades = diffRes[0].values.map(r => ({ id: r[0], name: r[1] }));
-      } catch(e) {}
-
-      let boardImages = [];
-      try {
-        const imgRes = db.exec(`
-          SELECT image_filename FROM product_sizes_layouts_sets 
-          WHERE layout_id = 11 AND (product_size_id = 6 OR product_size_id IS NULL)
-          AND image_filename IS NOT NULL
-        `);
-        if (imgRes.length > 0) boardImages = imgRes[0].values.map(r => r[0]);
-      } catch(e) {}
-
-      self.postMessage({ type: payload.requestId || 'READY', payload: { placements, ledMapping, angles, grades, boardImages, isLocal } });
+      const state = await getDatabaseState(isLocal);
+      self.postMessage({ type: payload.requestId || 'READY', payload: state });
     } catch (err) {
       self.postMessage({ type: 'ERROR', payload: err.message, requestId: payload.requestId });
     }
     return;
   }
+
+async function getDatabaseState(isLocal = true) {
+  if (!db) return { isLocal: false, placements: [], boardImages: [] };
+
+  const res = db.exec(`
+    SELECT p.id, h.x, h.y, l.position
+    FROM placements p 
+    JOIN holes h ON p.hole_id = h.id 
+    LEFT JOIN leds l ON h.id = l.hole_id
+    WHERE p.layout_id = 11 AND (l.product_size_id = 6 OR l.product_size_id IS NULL)
+  `);
+  
+  let ledMapping = {};
+  let placements = [];
+  if (res.length > 0) {
+    placements = res[0].values.map(row => {
+      if (row[3] !== null) ledMapping[row[0]] = row[3];
+      return { id: row[0], x: row[1], y: row[2] };
+    });
+  }
+
+  let angles = [15, 20, 25, 30, 35, 40, 45, 50, 55];
+  try {
+    const angRes = db.exec(`SELECT angle FROM products_angles WHERE product_id = 5 ORDER BY angle ASC`);
+    if (angRes.length > 0) angles = angRes[0].values.map(r => r[0]);
+  } catch(e) {}
+
+  let grades = [];
+  try {
+    const diffRes = db.exec(`SELECT difficulty, boulder_name FROM difficulty_grades WHERE is_listed = 1 ORDER BY difficulty ASC`);
+    if (diffRes.length > 0) grades = diffRes[0].values.map(r => ({ id: r[0], name: r[1] }));
+  } catch(e) {}
+
+  let boardImages = [];
+  try {
+    const imgRes = db.exec(`
+      SELECT image_filename FROM product_sizes_layouts_sets 
+      WHERE layout_id = 11 AND (product_size_id = 6 OR product_size_id IS NULL)
+      AND image_filename IS NOT NULL
+    `);
+    if (imgRes.length > 0) boardImages = imgRes[0].values.map(r => r[0]);
+  } catch(e) {}
+
+  return { placements, ledMapping, angles, grades, boardImages, isLocal };
+}
 
   if (type === 'SEARCH') {
     if (!db) return;
@@ -795,8 +802,32 @@ self.onmessage = async function(e) {
         const db = request.result;
         const transaction = db.transaction(IMAGE_STORE_NAME, 'readonly');
         const store = transaction.objectStore(IMAGE_STORE_NAME);
+        
+        // Try exact match first
         const getRequest = store.get(filename);
-        getRequest.onsuccess = () => self.postMessage({ type: payload.requestId, payload: getRequest.result });
+        getRequest.onsuccess = () => {
+          if (getRequest.result) {
+            self.postMessage({ type: payload.requestId, payload: getRequest.result });
+          } else {
+            // Fallback: try matching by basename (ignore path/prefix)
+            const baseName = filename.split('/').pop();
+            const cursorRequest = store.openCursor();
+            let found = false;
+            cursorRequest.onsuccess = (e) => {
+              const cursor = e.target.result;
+              if (cursor) {
+                if (cursor.key.split('/').pop() === baseName) {
+                  self.postMessage({ type: payload.requestId, payload: cursor.value });
+                  found = true;
+                } else {
+                  cursor.continue();
+                }
+              } else if (!found) {
+                self.postMessage({ type: payload.requestId, payload: null });
+              }
+            };
+          }
+        };
       };
     } catch (e) {
       self.postMessage({ type: 'ERROR', payload: e.message });
