@@ -2548,7 +2548,11 @@ function saveCurrentViewState() {
 }
 
 function switchTab(toHistory) {
-  if (isHistoryMode === toHistory) return;
+  if (isHistoryMode === toHistory) {
+    // Allow manual refresh if tapping the History tab while already active
+    if (toHistory) triggerHistorySearch();
+    return;
+  }
 
   // 1. Save current state
   saveCurrentViewState();
@@ -2569,8 +2573,13 @@ function switchTab(toHistory) {
   recommendationStack = newState.recommendationStack;
   currentClimb = newState.climb;
 
-  // 5. Re-render UI
-  if (currentRoutes.length > 0) {
+  // 5. Re-render UI or Fetch
+  if (isHistoryMode) {
+    // Always fetch fresh history to avoid stale cache
+    triggerHistorySearch();
+  } else if (currentRoutes.length > 0) {
+    // Restore Discovery list from cache
+    
     // Restore the recommendation header if needed
     if (recommendationStack.length > 0) {
       document.getElementById('normal-status').classList.add('hidden');
@@ -2596,16 +2605,11 @@ function switchTab(toHistory) {
       document.getElementById('route-list').scrollTop = newState.scrollPos;
     }, 0);
   } else {
-    // Empty state - trigger initial load for this mode
+    // Empty Discovery state - trigger initial load
     document.getElementById('route-list').innerHTML = '';
     document.getElementById('normal-status').classList.remove('hidden');
     document.getElementById('recommendation-status').classList.add('hidden');
-    
-    if (isHistoryMode) {
-      triggerHistorySearch();
-    } else {
-      triggerSearch();
-    }
+    triggerSearch();
   }
 }
 
