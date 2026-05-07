@@ -107,4 +107,20 @@ export class DatabaseClient {
       this.worker.postMessage({ type: 'APPLY_SYNC', payload: { tables, requestId } });
     });
   }
+
+  saveImage(filename, buffer) {
+    return new Promise((resolve) => {
+      const requestId = 'SAVE_IMG_' + Date.now() + '_' + Math.random();
+      this.resolvers[requestId] = resolve;
+      this.worker.postMessage({ type: 'SAVE_IMAGE', payload: { filename, buffer, requestId } });
+    });
+  }
+
+  getImage(filename) {
+    return new Promise((resolve) => {
+      const requestId = 'GET_IMG_' + Date.now() + '_' + Math.random();
+      this.resolvers[requestId] = resolve;
+      this.worker.postMessage({ type: 'GET_IMAGE', payload: { filename, requestId } });
+    });
+  }
 }

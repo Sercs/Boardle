@@ -3,7 +3,7 @@ import { RadialMenu } from './radial-menu.js';
 import { BottomSheet } from './bottom-sheet.js';
 import { BluetoothAPI } from './bluetooth.js';
 import { Logbook } from './logbook.js';
-import { getImageUrl, fetchDatabase } from './aurora-api.js';
+import { getImageUrl, fetchDatabase, fetchImage } from './aurora-api.js';
 
 let dbClient;
 let radialMenu;
@@ -115,39 +115,41 @@ async function reinitializeUI(readyPayload) {
     const holdsContainer = document.getElementById('holds-container');
     imagesContainer.innerHTML = '';
     
-    for (const filename of readyPayload.boardImages) {
+    const imagePromises = readyPayload.boardImages.map(async (filename) => {
       const img = document.createElement('img');
       img.className = 'board-layer';
       
       // Try local image first
-      const requestId = `get_img_${Date.now()}_${filename}`;
-      const localImagePromise = new Promise((resolve) => {
-        const handler = (e) => {
-          if (e.data.type === requestId) {
-            dbClient.worker.removeEventListener('message', handler);
-            resolve(e.data.payload);
-          }
-        };
-        dbClient.worker.addEventListener('message', handler);
-        dbClient.worker.postMessage({ type: 'GET_IMAGE', payload: { filename, requestId } });
-      });
-
-      const localBuffer = await localImagePromise;
+      const localBuffer = await dbClient.getImage(filename);
       if (localBuffer) {
         const blob = new Blob([localBuffer]);
         img.src = URL.createObjectURL(blob);
         console.log(`[Images] Using local version of ${filename}`);
       } else {
-        img.src = getImageUrl('tension', filename);
-        console.log(`[Images] Fetching ${filename} from API...`);
+        console.log(`[Images] Fetching ${filename} from API for caching...`);
+        try {
+          const blob = await fetchImage('tension', filename);
+          img.src = URL.createObjectURL(blob);
+          
+          // Save to local IndexedDB for next time
+          const buffer = await blob.arrayBuffer();
+          await dbClient.saveImage(filename, buffer);
+        } catch (e) {
+          console.error(`[Images] Failed to cache ${filename}, falling back to direct proxy:`, e);
+          img.src = getImageUrl('tension', filename);
+        }
       }
 
       img.onerror = () => {
         console.error(`Failed to load board image: ${filename}`);
         img.style.display = 'none';
       };
-      imagesContainer.appendChild(img);
-    }
+      
+      return img;
+    });
+
+    const loadedImages = await Promise.all(imagePromises);
+    loadedImages.forEach(img => imagesContainer.appendChild(img));
     imagesContainer.appendChild(holdsContainer);
   } else {
     // Fallback if no images found
