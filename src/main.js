@@ -622,12 +622,16 @@ async function init() {
       setupBtn.classList.add('hidden');
 
       try {
-        if (statusText) statusText.textContent = 'Connecting to cloud storage...';
+        if (statusText) statusText.textContent = 'Initializing download...';
         
-        const buffer = await fetchDatabase('tension');
+        const buffer = await fetchDatabase('tension', (progress) => {
+          const pct = Math.round(progress * 100);
+          if (progressFill) progressFill.style.width = `${pct * 0.8}%`; // Reserve 20% for installation
+          if (statusText) statusText.textContent = `Downloading database: ${pct}% (~80MB)`;
+        });
         
         if (statusText) statusText.textContent = 'Installing database...';
-        if (progressFill) progressFill.style.width = '50%';
+        if (progressFill) progressFill.style.width = '90%';
         
         await dbClient.replaceDatabase(buffer);
         
@@ -637,6 +641,7 @@ async function init() {
         showToast("Boardle Initialized!", 3000);
         if (window.reinitApp) await window.reinitApp();
       } catch (err) {
+        console.error('Setup Error:', err);
         alert(`Initialization Failed: ${err.message}`);
         setupBtn.classList.remove('hidden');
         if (progressContainer) progressContainer.classList.add('hidden');

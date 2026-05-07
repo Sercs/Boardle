@@ -1575,6 +1575,12 @@ body.dragging-setter #setter-role-selector {
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.4);
   font-family: 'JetBrains Mono', monospace;
+  animation: status-fade 2s infinite ease-in-out;
+}
+
+@keyframes status-fade {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
 }
 
 /* Tutorial Utility Classes */

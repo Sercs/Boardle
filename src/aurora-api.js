@@ -62,7 +62,7 @@ export async function login(board, username, password) {
 }
 
 // Helper to fetch the raw database file directly (from R2 or similar)
-export async function fetchDatabase(board) {
+export async function fetchDatabase(board, onProgress) {
   console.log(`[Database] Attempting direct fetch for ${board}.sqlite3...`);
   // We use a dummy URL that ends in .sqlite3 so the proxy checks R2
   const dummyUrl = `https://tensionboardapp2.com/${board}.sqlite3`;
@@ -75,14 +75,39 @@ export async function fetchDatabase(board) {
     throw new Error(`Direct fetch failed: ${response.status}`);
   }
 
+  const contentLength = response.headers.get('content-length');
+  const total = contentLength ? parseInt(contentLength, 10) : 0;
+  let loaded = 0;
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    
+    chunks.push(value);
+    loaded += value.length;
+    
+    if (onProgress && total) {
+      onProgress(loaded / total);
+    }
+  }
+
+  const buffer = new Uint8Array(loaded);
+  let position = 0;
+  for (const chunk of chunks) {
+    buffer.set(chunk, position);
+    position += chunk.length;
+  }
+
   // Check if it's actually a sqlite file (starts with "SQLite format 3")
-  const buffer = await response.arrayBuffer();
-  const header = new TextDecoder().decode(new Uint8Array(buffer).slice(0, 15));
+  const header = new TextDecoder().decode(buffer.slice(0, 15));
   if (header !== "SQLite format 3") {
     throw new Error("Downloaded file is not a valid SQLite database");
   }
 
-  return buffer;
+  return buffer.buffer;
 }
 
 
