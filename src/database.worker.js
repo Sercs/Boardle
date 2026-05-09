@@ -370,7 +370,7 @@ async function getDatabaseState(isLocal = true) {
         c.name, 
         c.setter_username, 
         c.description,
-        COALESCE(cs.angle, 'Any') as angle, 
+        COALESCE(NULLIF(c.angle, 0), cs.angle, 'Any') as angle, 
         c.frames, 
         CASE 
           WHEN dg.boulder_name IS NOT NULL THEN dg.boulder_name
@@ -380,7 +380,7 @@ async function getDatabaseState(isLocal = true) {
         (SELECT SUM(ascensionist_count) FROM climb_stats WHERE climb_uuid = c.uuid) as ascents,
         AVG(cs.quality_average) as rating
       FROM climbs c
-      LEFT JOIN climb_stats cs ON c.uuid = cs.climb_uuid AND cs.angle = c.angle
+      LEFT JOIN climb_stats cs ON c.uuid = cs.climb_uuid AND cs.angle = COALESCE(NULLIF(c.angle, 0), (SELECT angle FROM climb_stats WHERE climb_uuid = c.uuid ORDER BY ascensionist_count DESC LIMIT 1))
       LEFT JOIN difficulty_grades dg ON ROUND(cs.display_difficulty) = dg.difficulty
       WHERE c.layout_id = 11 AND c.is_listed = 1 
       ${conditionString}
@@ -470,14 +470,14 @@ async function getDatabaseState(isLocal = true) {
           c.name, 
           c.setter_username, 
           c.description,
-          COALESCE(c.angle, 'Any') as angle, 
+          COALESCE(NULLIF(c.angle, 0), cs.angle, 'Any') as angle, 
           c.frames, 
           dg.boulder_name,
           SUM(cs.ascensionist_count) as ascents,
           AVG(cs.quality_average) as rating,
           ROUND(cs.display_difficulty) as difficulty
         FROM climbs c
-        LEFT JOIN climb_stats cs ON c.uuid = cs.climb_uuid
+        LEFT JOIN climb_stats cs ON c.uuid = cs.climb_uuid AND cs.angle = COALESCE(NULLIF(c.angle, 0), (SELECT angle FROM climb_stats WHERE climb_uuid = c.uuid ORDER BY ascensionist_count DESC LIMIT 1))
         LEFT JOIN difficulty_grades dg ON ROUND(cs.display_difficulty) = dg.difficulty
         WHERE c.uuid IN (${uuids.join(',')})
         GROUP BY c.uuid
@@ -531,14 +531,14 @@ async function getDatabaseState(isLocal = true) {
         c.name, 
         c.setter_username, 
         c.description,
-        COALESCE(cs.angle, c.angle, 'Any') as angle, 
+        COALESCE(NULLIF(c.angle, 0), cs.angle, 'Any') as angle, 
         c.frames, 
         dg.boulder_name,
         SUM(cs.ascensionist_count) as ascents,
         AVG(cs.quality_average) as rating,
         ROUND(cs.display_difficulty) as difficulty
       FROM climbs c
-      LEFT JOIN climb_stats cs ON c.uuid = cs.climb_uuid
+      LEFT JOIN climb_stats cs ON c.uuid = cs.climb_uuid AND cs.angle = COALESCE(NULLIF(c.angle, 0), (SELECT angle FROM climb_stats WHERE climb_uuid = c.uuid ORDER BY ascensionist_count DESC LIMIT 1))
       LEFT JOIN difficulty_grades dg ON ROUND(cs.display_difficulty) = dg.difficulty
       WHERE c.uuid IN (${uuidList})
       GROUP BY c.uuid
