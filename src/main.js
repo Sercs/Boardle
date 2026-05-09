@@ -255,36 +255,53 @@ class CoPilot {
 
         const output = await runInference(baseTokens, baseCoords);
         const vocabSize = output.logits.dims[2];
-        const dist = getSortedDistribution(output.logits.data, (numTokens - 1) * vocabSize, JOINT_VOCAB_SIZE, 1.0);
         
+        // Set temperature to 0.8 for sharper, more grounded suggestions
+        const dist = getSortedDistribution(output.logits.data, (numTokens - 1) * vocabSize, JOINT_VOCAB_SIZE, 0.8);
+        
+        // Filter for Nucleus (Top-P 0.95) and exclude existing holds
         this.rankedIdPool = [];
         let cumSum = 0;
         for (let entry of dist) {
           const holdId = Math.floor(entry.id / 5);
           if (holdId <= 0 || holds.some(h => h.id == holdId)) continue;
-          this.rankedIdPool.push(entry.id);
+          this.rankedIdPool.push(entry); // Keep the whole entry for weighted sampling
           cumSum += entry.p; if (cumSum >= 0.95) break;
         }
       }
 
       const suggestions = [];
-      const batchJointTokens = this.rankedIdPool.slice(this.currentIdOffset, this.currentIdOffset + count);
-      this.currentIdOffset += count;
-
-      for (const jointToken of batchJointTokens) {
-        const holdId = Math.floor(jointToken / 5);
-        let roleIdx = jointToken % 5;
-        if (excludeIds.includes(holdId)) continue;
+      // Filter out holds that are already in the suggestion stack or current holds
+      const tempPool = this.rankedIdPool.filter(entry => {
+        const holdId = Math.floor(entry.id / 5);
+        return !excludeIds.includes(holdId);
+      });
+      
+      for (let i = 0; i < count && tempPool.length > 0; i++) {
+        // Weighted random sampling without replacement
+        let totalP = tempPool.reduce((sum, entry) => sum + entry.p, 0);
+        let r = Math.random() * totalP;
+        let runningSum = 0;
         
-        const node = placements.find(n => n.id == holdId);
-        if (!node) continue;
-        
-        // If the model predicts a Distractor (4), promote to Intermediate (1) for functional use
-        if (roleIdx === 4) roleIdx = 1;
-
-        const invRoleMap = { 0: 5, 1: 6, 2: 7, 3: 8 };
-        const role = invRoleMap[roleIdx] || 6;
-        suggestions.push({ id: holdId, role: role, x: node.x, y: node.y });
+        for (let j = 0; j < tempPool.length; j++) {
+          runningSum += tempPool[j].p;
+          if (runningSum >= r) {
+            const sampledEntry = tempPool.splice(j, 1)[0];
+            const jointToken = sampledEntry.id;
+            
+            const holdId = Math.floor(jointToken / 5);
+            let roleIdx = jointToken % 5;
+            const node = placements.find(n => n.id == holdId);
+            
+            if (node) {
+              if (roleIdx === 4) roleIdx = 1; // Promote distractor to intermediate
+              const invRoleMap = { 0: 5, 1: 6, 2: 7, 3: 8 };
+              const role = invRoleMap[roleIdx] || 6;
+              suggestions.push({ id: holdId, role: role, x: node.x, y: node.y });
+            }
+            break;
+          }
+        }
       }
       return suggestions;
     } catch (e) {
